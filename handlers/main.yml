@@ -1,0 +1,8 @@
+- name: reload systemd daemon
+  systemd:
+    daemon_reload: True
+
+- name: restart haveged
+  systemd:
+    name: haveged
+    state: restarted

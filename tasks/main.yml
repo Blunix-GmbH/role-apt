@@ -1,0 +1,78 @@
+- name: setup /usr/local/sbin/apt-get
+  template:
+    src: templates/usr/local/sbin/apt-get.sh.j2
+    dest: /usr/local/sbin/apt-get
+    owner: root
+    group: root
+    mode: 0750
+
+- name: affirm debconf unattended-upgrades/enable_auto_updates
+  debconf:
+    name: unattended-upgrades
+    question: unattended-upgrades/enable_auto_updates
+    vtype: boolean
+    value: "true"
+
+
+# set systemd apt-daily-upgrade.timer to run every four hours
+# every four hours is enough, as mirrors update every four hours: https://www.debian.org/mirror/ftpmirror#when
+# Doc: https://wiki.debian.org/UnattendedUpgrades#Modifying_download_and_upgrade_schedules_.28on_systemd.29
+- name: create directories for systemd apt-daily and apt-daily-upgrade overrides
+  file:
+    state: directory
+    path: "{{ apt_daily_upgrade_override_directory }}"
+    owner: root
+    group: root
+    mode: 0755
+  with_items:
+    - /etc/systemd/system/apt-daily.timer.d/
+    - /etc/systemd/system/apt-daily-upgrade.timer.d/
+  loop_control:
+    loop_var: apt_daily_upgrade_override_directory
+
+- name: override systemd apt-daily
+  copy:
+    dest: /etc/systemd/system/apt-daily.timer.d/override.conf
+    content: |
+      [Timer]
+      OnCalendar=*-*-* 4:00:00
+      OnCalendar=*-*-* 10:00:00
+      OnCalendar=*-*-* 16:00:00
+      OnCalendar=*-*-* 22:00:00
+      RandomizedDelaySec=0
+    owner: root
+    group: root
+    mode: 0644
+  notify: reload systemd daemon
+    
+- name: override systemd apt-daily-upgrade
+  copy:
+    dest: /etc/systemd/system/apt-daily-upgrade.timer.d/override.conf
+    content: |
+      [Timer]
+      OnCalendar=
+      OnCalendar=*-*-* 4:15:00
+      OnCalendar=*-*-* 10:15:00
+      OnCalendar=*-*-* 16:15:00
+      OnCalendar=*-*-* 22:15:00
+      RandomizedDelaySec=0
+    owner: root
+    group: root
+    mode: 0644
+  notify: reload systemd daemon
+    
+
+- name: install default packages
+  apt:
+    name: "{{ apt_default_packages }}"
+    state: present
+
+- name: configure default package haveged
+  copy:
+    dest: /etc/default/haveged
+    content: 'DAEMON_ARGS="-w 3072"'
+    owner: root
+    group: root
+    mode: 0640
+  when: "'haveged' in apt_default_packages"
+  notify: restart haveged
