@@ -17,3 +17,4 @@ apt_default_packages:
   - tcpdump
   - telnet
   - unattended-upgrades
+  - vim
