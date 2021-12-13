@@ -76,3 +76,7 @@
     mode: 0640
   when: "'haveged' in apt_default_packages"
   notify: restart haveged
+
+- name: run apt-get autoremove
+  apt:
+    autoremove: yes
