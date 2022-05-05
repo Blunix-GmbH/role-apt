@@ -8,6 +8,7 @@ apt_default_packages:
   - haveged
   - locate
   - lsof
+  - ncdu
   - net-tools
   - ntpdate
   - psmisc # for killall
